@@ -110,6 +110,7 @@ target_link_libraries(kraken_trader PRIVATE trader_lib)
 # Install rules
 install(TARGETS kraken_trader DESTINATION bin)
 install(DIRECTORY scripts/ DESTINATION share/kraken_trader/scripts)
+install(DIRECTORY examples/ DESTINATION share/kraken_trader/examples)
 install(FILES config/trader.toml DESTINATION etc/kraken_trader)
 
 # Tests (optional)

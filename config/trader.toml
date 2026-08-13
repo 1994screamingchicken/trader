@@ -63,9 +63,10 @@ max_files = 5
 
 # Script definitions
 # Each [[scripts]] entry defines a trading script to load
+# Top 10 cryptocurrencies by market cap on Kraken
 
 [[scripts]]
-name = "simple_momentum"
+name = "momentum_btc"
 path = "scripts/simple_momentum.lua"
 auto_start = true
 [scripts.parameters]
@@ -74,7 +75,7 @@ threshold = "0.5"
 quantity = "0.001"
 
 [[scripts]]
-name = "mean_reversion"
+name = "mean_reversion_eth"
 path = "scripts/mean_reversion.lua"
 auto_start = true
 [scripts.parameters]
@@ -82,3 +83,81 @@ pair = "ETH/USD"
 lookback = "20"
 deviation = "2.0"
 quantity = "0.01"
+
+[[scripts]]
+name = "ema_crossover_sol"
+path = "examples/ema_crossover.lua"
+auto_start = true
+[scripts.parameters]
+pair = "SOL/USD"
+fast_period = "9"
+slow_period = "21"
+quantity = "0.5"
+
+[[scripts]]
+name = "grid_trader_xrp"
+path = "scripts/grid_trader.lua"
+auto_start = true
+[scripts.parameters]
+pair = "XRP/USD"
+grid_levels = "10"
+grid_spacing = "0.02"
+quantity = "50"
+
+[[scripts]]
+name = "momentum_ada"
+path = "scripts/simple_momentum.lua"
+auto_start = true
+[scripts.parameters]
+pair = "ADA/USD"
+threshold = "0.8"
+quantity = "100"
+
+[[scripts]]
+name = "mean_reversion_dot"
+path = "scripts/mean_reversion.lua"
+auto_start = true
+[scripts.parameters]
+pair = "DOT/USD"
+lookback = "15"
+deviation = "1.5"
+quantity = "5"
+
+[[scripts]]
+name = "ema_crossover_avax"
+path = "examples/ema_crossover.lua"
+auto_start = true
+[scripts.parameters]
+pair = "AVAX/USD"
+fast_period = "12"
+slow_period = "26"
+quantity = "2"
+
+[[scripts]]
+name = "grid_trader_link"
+path = "scripts/grid_trader.lua"
+auto_start = true
+[scripts.parameters]
+pair = "LINK/USD"
+grid_levels = "8"
+grid_spacing = "0.03"
+quantity = "5"
+
+[[scripts]]
+name = "mean_reversion_matic"
+path = "scripts/mean_reversion.lua"
+auto_start = true
+[scripts.parameters]
+pair = "MATIC/USD"
+lookback = "25"
+deviation = "2.5"
+quantity = "200"
+
+[[scripts]]
+name = "momentum_doge"
+path = "scripts/simple_momentum.lua"
+auto_start = true
+[scripts.parameters]
+pair = "DOGE/USD"
+threshold = "1.0"
+quantity = "500"

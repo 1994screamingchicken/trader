@@ -2,7 +2,7 @@
   "id": "FEAT-001",
   "type": "feat",
   "description": "Implement a complete backtesting engine that replays historical OHLC data through existing Lua trading scripts unchanged, with performance reporting at the end.",
-  "status": "in_progress",
+  "status": "completed",
   "steps": [
     "1. Add backtest config structures to include/core/config.hpp: BacktestConfig struct with fields for data_file (CSV path), pair, start_date, end_date, initial_balance, and commission_pct. Add a BacktestResult struct to hold performance metrics (total_pnl, num_trades, win_rate, max_drawdown, sharpe_ratio, etc.).",
     "2. Create include/backtest/data_feed.hpp: DataFeed class that reads a CSV file of OHLC candles (columns: timestamp, open, high, low, close, volume) and provides iteration. Support Kraken's OHLC format. Provide a method to generate synthetic ticker data from each candle (last price = close).",
@@ -33,5 +33,5 @@
     "./kraken_trader --backtest --data ../data/sample_btc_1h.csv --script ../scripts/simple_momentum.lua --pair XBT/USD --balance 10000 --commission 0.1"
   ],
   "blocked_reason": null,
-  "findings": ""
+  "findings": "Made KrakenRestClient methods virtual (destructor + all API methods) to allow BacktestRestClient to inherit and override. The simple_momentum.lua script has check_interval=50 so it only checks price every 50 ticks/candles; in backtest mode each candle is one tick. Both simple_momentum.lua and top_crypto_trader.lua run successfully without modifications. Build compiles cleanly with GCC 11.5."
 }

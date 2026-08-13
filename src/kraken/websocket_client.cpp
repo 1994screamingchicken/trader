@@ -1,34 +1,35 @@
 #include "kraken/websocket_client.hpp"
 #include "core/logger.hpp"
 
-#include <websocketpp/config/asio_client.hpp>
-#include <websocketpp/client.hpp>
+#include <boost/beast/core.hpp>
+#include <boost/beast/ssl.hpp>
+#include <boost/beast/websocket.hpp>
+#include <boost/beast/websocket/ssl.hpp>
+#include <boost/asio/connect.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/ssl/stream.hpp>
+#include <boost/asio/strand.hpp>
 
 #include <thread>
 #include <chrono>
 
 namespace trader {
 
-using WsClient = websocketpp::client<websocketpp::config::asio_tls_client>;
-using WsConnectionPtr = websocketpp::connection_hdl;
-using SslContext = websocketpp::lib::shared_ptr<boost::asio::ssl::context>;
+namespace beast = boost::beast;
+namespace websocket = beast::websocket;
+namespace net = boost::asio;
+namespace ssl = net::ssl;
+using tcp = net::ip::tcp;
 
-/// Internal WebSocket implementation using websocketpp
+/// Internal WebSocket implementation using Boost.Beast
 class KrakenWebSocketClient::Impl {
 public:
-    Impl() {
-        client_.clear_access_channels(websocketpp::log::alevel::all);
-        client_.clear_error_channels(websocketpp::log::elevel::all);
-
-        client_.init_asio();
-
-        client_.set_tls_init_handler([](WsConnectionPtr) -> SslContext {
-            auto ctx = std::make_shared<boost::asio::ssl::context>(
-                boost::asio::ssl::context::tlsv12_client);
-            ctx->set_default_verify_paths();
-            ctx->set_verify_mode(boost::asio::ssl::verify_peer);
-            return ctx;
-        });
+    Impl()
+        : ssl_ctx_(ssl::context::tlsv12_client),
+          resolver_(ioc_),
+          ws_(ioc_, ssl_ctx_) {
+        ssl_ctx_.set_default_verify_paths();
+        ssl_ctx_.set_verify_mode(ssl::verify_peer);
     }
 
     ~Impl() {
@@ -41,39 +42,65 @@ public:
                  std::function<void(const std::string&)> on_close,
                  std::function<void(const std::string&)> on_fail) {
 
-        websocketpp::lib::error_code ec;
-        auto con = client_.get_connection(url, ec);
-        if (ec) {
-            if (on_fail) on_fail(ec.message());
+        on_message_ = std::move(on_message);
+        on_open_ = std::move(on_open);
+        on_close_ = std::move(on_close);
+        on_fail_ = std::move(on_fail);
+
+        // Parse the URL (expects wss://host/path or wss://host)
+        std::string host;
+        std::string path = "/";
+        std::string port = "443";
+
+        // Strip scheme
+        std::string stripped = url;
+        if (stripped.find("wss://") == 0) {
+            stripped = stripped.substr(6);
+        } else if (stripped.find("ws://") == 0) {
+            stripped = stripped.substr(5);
+            port = "80";
+        }
+
+        // Split host and path
+        auto slash_pos = stripped.find('/');
+        if (slash_pos != std::string::npos) {
+            host = stripped.substr(0, slash_pos);
+            path = stripped.substr(slash_pos);
+        } else {
+            host = stripped;
+        }
+
+        // Handle port in host
+        auto colon_pos = host.find(':');
+        if (colon_pos != std::string::npos) {
+            port = host.substr(colon_pos + 1);
+            host = host.substr(0, colon_pos);
+        }
+
+        host_ = host;
+
+        // Set SNI hostname for TLS
+        if (!SSL_set_tlsext_host_name(ws_.next_layer().native_handle(), host.c_str())) {
+            beast::error_code ec{static_cast<int>(::ERR_get_error()), net::error::get_ssl_category()};
+            if (on_fail_) on_fail_(ec.message());
             return;
         }
 
-        con->set_message_handler(
-            [on_message](WsConnectionPtr, WsClient::message_ptr msg) {
-                if (on_message) on_message(msg->get_payload());
+        // Resolve the host
+        resolver_.async_resolve(
+            host, port,
+            [this, host, path](beast::error_code ec, tcp::resolver::results_type results) {
+                if (ec) {
+                    if (on_fail_) on_fail_(ec.message());
+                    return;
+                }
+                on_resolve(ec, results, host, path);
             });
 
-        con->set_open_handler([on_open](WsConnectionPtr) {
-            if (on_open) on_open();
-        });
-
-        con->set_close_handler([on_close](WsConnectionPtr) {
-            if (on_close) on_close("Connection closed");
-        });
-
-        con->set_fail_handler([on_fail, &client = client_](WsConnectionPtr hdl) {
-            auto con = client.get_con_from_hdl(hdl);
-            std::string reason = con->get_ec().message();
-            if (on_fail) on_fail(reason);
-        });
-
-        connection_ = con->get_handle();
-        client_.connect(con);
-
-        // Run the ASIO event loop in a background thread
+        // Run the io_context in a background thread
         ws_thread_ = std::thread([this]() {
             try {
-                client_.run();
+                ioc_.run();
             } catch (const std::exception& e) {
                 auto logger = get_logger("ws");
                 logger->error("WebSocket event loop exception: {}", e.what());
@@ -82,41 +109,171 @@ public:
     }
 
     void send(const std::string& message) {
-        websocketpp::lib::error_code ec;
-        client_.send(connection_, message, websocketpp::frame::opcode::text, ec);
-        if (ec) {
-            auto logger = get_logger("ws");
-            logger->error("WebSocket send error: {}", ec.message());
-        }
+        net::post(ioc_, [this, message]() {
+            bool was_empty = write_queue_.empty();
+            write_queue_.push(message);
+            if (was_empty && connected_) {
+                do_write();
+            }
+        });
     }
 
     void close() {
-        websocketpp::lib::error_code ec;
-        client_.close(connection_, websocketpp::close::status::normal, "Client disconnect", ec);
+        net::post(ioc_, [this]() {
+            if (connected_) {
+                beast::error_code ec;
+                ws_.close(websocket::close_code::normal, ec);
+            }
+        });
     }
 
     void stop() {
-        if (!client_.stopped()) {
-            client_.stop();
-        }
+        ioc_.stop();
         if (ws_thread_.joinable()) {
             ws_thread_.join();
         }
     }
 
     bool is_open() const {
-        try {
-            auto con = client_.get_con_from_hdl(connection_);
-            return con && con->get_state() == websocketpp::session::state::open;
-        } catch (...) {
-            return false;
-        }
+        return connected_;
     }
 
 private:
-    mutable WsClient client_;
-    WsConnectionPtr connection_;
+    void on_resolve(beast::error_code ec, tcp::resolver::results_type results,
+                    const std::string& host, const std::string& path) {
+        if (ec) {
+            if (on_fail_) on_fail_(ec.message());
+            return;
+        }
+
+        // Connect to the endpoint using beast::tcp_stream's async_connect
+        beast::get_lowest_layer(ws_).async_connect(
+            results,
+            [this, host, path](beast::error_code ec, const tcp::endpoint&) {
+                if (ec) {
+                    if (on_fail_) on_fail_(ec.message());
+                    return;
+                }
+                on_connect(ec, host, path);
+            });
+    }
+
+    void on_connect(beast::error_code ec, const std::string& host, const std::string& path) {
+        if (ec) {
+            if (on_fail_) on_fail_(ec.message());
+            return;
+        }
+
+        // Perform the SSL handshake
+        ws_.next_layer().async_handshake(
+            ssl::stream_base::client,
+            [this, host, path](beast::error_code ec) {
+                if (ec) {
+                    if (on_fail_) on_fail_(ec.message());
+                    return;
+                }
+                on_ssl_handshake(ec, host, path);
+            });
+    }
+
+    void on_ssl_handshake(beast::error_code ec, const std::string& host, const std::string& path) {
+        if (ec) {
+            if (on_fail_) on_fail_(ec.message());
+            return;
+        }
+
+        // Set the User-Agent
+        ws_.set_option(websocket::stream_base::decorator(
+            [](websocket::request_type& req) {
+                req.set(beast::http::field::user_agent,
+                        "KrakenLuaTrader/1.0");
+            }));
+
+        // Perform the WebSocket handshake
+        ws_.async_handshake(host, path,
+            [this](beast::error_code ec) {
+                if (ec) {
+                    if (on_fail_) on_fail_(ec.message());
+                    return;
+                }
+                on_handshake(ec);
+            });
+    }
+
+    void on_handshake(beast::error_code ec) {
+        if (ec) {
+            if (on_fail_) on_fail_(ec.message());
+            return;
+        }
+
+        connected_ = true;
+        if (on_open_) on_open_();
+
+        // Start reading messages
+        do_read();
+    }
+
+    void do_read() {
+        ws_.async_read(buffer_,
+            [this](beast::error_code ec, std::size_t /*bytes_transferred*/) {
+                on_read(ec);
+            });
+    }
+
+    void on_read(beast::error_code ec) {
+        if (ec) {
+            connected_ = false;
+            if (ec == websocket::error::closed) {
+                if (on_close_) on_close_("Connection closed");
+            } else {
+                if (on_close_) on_close_(ec.message());
+            }
+            return;
+        }
+
+        // Deliver message
+        std::string msg = beast::buffers_to_string(buffer_.data());
+        buffer_.consume(buffer_.size());
+
+        if (on_message_) on_message_(msg);
+
+        // Continue reading
+        do_read();
+    }
+
+    void do_write() {
+        if (write_queue_.empty()) return;
+
+        ws_.async_write(
+            net::buffer(write_queue_.front()),
+            [this](beast::error_code ec, std::size_t /*bytes_transferred*/) {
+                if (ec) {
+                    auto logger = get_logger("ws");
+                    logger->error("WebSocket send error: {}", ec.message());
+                    return;
+                }
+                write_queue_.pop();
+                if (!write_queue_.empty()) {
+                    do_write();
+                }
+            });
+    }
+
+    net::io_context ioc_;
+    ssl::context ssl_ctx_;
+    tcp::resolver resolver_;
+    websocket::stream<beast::ssl_stream<beast::tcp_stream>> ws_;
+    beast::flat_buffer buffer_;
+
+    std::string host_;
+    std::atomic<bool> connected_{false};
     std::thread ws_thread_;
+    std::queue<std::string> write_queue_;
+
+    std::function<void(const std::string&)> on_message_;
+    std::function<void()> on_open_;
+    std::function<void(const std::string&)> on_close_;
+    std::function<void(const std::string&)> on_fail_;
 };
 
 // ==================== KrakenWebSocketClient ====================

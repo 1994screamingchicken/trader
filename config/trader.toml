@@ -2,8 +2,8 @@
 # ================================
 
 [general]
-# Directory containing Lua trading scripts (use "." for project root so both scripts/ and examples/ work)
-scripts_directory = "."
+# Directory containing Lua trading scripts (relative to this config file's location)
+scripts_directory = ".."
 # Main loop tick interval in milliseconds
 tick_interval_ms = 200
 # Paper trading mode (no real orders placed)

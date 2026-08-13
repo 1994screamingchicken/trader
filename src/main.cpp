@@ -107,6 +107,11 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
+    // Resolve scripts_directory relative to config file location
+    if (config.scripts_directory.is_relative()) {
+        config.scripts_directory = std::filesystem::canonical(config_path).parent_path() / config.scripts_directory;
+    }
+
     // Apply verbose override
     if (verbose) {
         config.logging.level = "debug";

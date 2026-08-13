@@ -5,7 +5,7 @@
 # Directory containing Lua trading scripts
 scripts_directory = "scripts"
 # Main loop tick interval in milliseconds
-tick_interval_ms = 100
+tick_interval_ms = 200
 # Paper trading mode (no real orders placed)
 paper_trading = true
 
@@ -41,11 +41,11 @@ enforce_loss_limits = true
 # Maximum API calls per second (global)
 max_calls_per_second = 1
 # Maximum API calls per minute (global)
-max_calls_per_minute = 15
+max_calls_per_minute = 45
 # Cooldown period in seconds after hitting rate limit
 cooldown_seconds = 30
 # Per-script rate limit (calls per minute)
-per_script_calls_per_minute = 5
+per_script_calls_per_minute = 10
 
 [logging]
 # Log level: trace, debug, info, warn, error, critical

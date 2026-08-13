@@ -14,7 +14,7 @@ local state = {
     prices = {},           -- Rolling price history
     position = "flat",     -- "flat", "long", "short"
     tick_count = 0,
-    sample_interval = 5,   -- Sample price every N ticks
+    sample_interval = 100,  -- Sample price every N ticks (100 * 200ms = 20s)
     entry_price = 0,
     total_trades = 0,
 }
@@ -89,6 +89,7 @@ function on_tick()
     -- Get current price
     local result = trader.get_ticker(params.pair)
     if not result.success then
+        log.debug("Failed to get ticker for " .. params.pair .. ": " .. (result.error or "unknown"))
         return
     end
 

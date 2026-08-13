@@ -13,7 +13,7 @@ local state = {
     last_price = nil,
     position = "flat",  -- "flat", "long", "short"
     tick_count = 0,
-    check_interval = 10,  -- Check price every N ticks
+    check_interval = 50,  -- Check price every N ticks (50 * 200ms = 10s)
 }
 
 function on_init()

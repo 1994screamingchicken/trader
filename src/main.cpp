@@ -14,6 +14,8 @@
 #include "safety/risk_manager.hpp"
 #include "tui/tui_app.hpp"
 #include "tui/log_sink.hpp"
+#include "backtest/backtest_engine.hpp"
+#include "backtest/performance.hpp"
 
 // g_running has external linkage for TUI module coordinated shutdown
 std::atomic<bool> g_running{true};
@@ -73,6 +75,12 @@ int main(int argc, char* argv[]) {
     std::filesystem::path config_path = "config/trader.toml";
     bool verbose = false;
     bool use_tui = false;
+    bool backtest_mode = false;
+    std::string bt_data_file;
+    std::string bt_script_file;
+    std::string bt_pair = "XBT/USD";
+    double bt_balance = 10000.0;
+    double bt_commission = 0.1;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -82,19 +90,80 @@ int main(int argc, char* argv[]) {
             verbose = true;
         } else if (arg == "--tui") {
             use_tui = true;
+        } else if (arg == "--backtest") {
+            backtest_mode = true;
+        } else if (arg == "--data" && i + 1 < argc) {
+            bt_data_file = argv[++i];
+        } else if (arg == "--script" && i + 1 < argc) {
+            bt_script_file = argv[++i];
+        } else if (arg == "--pair" && i + 1 < argc) {
+            bt_pair = argv[++i];
+        } else if (arg == "--balance" && i + 1 < argc) {
+            bt_balance = std::stod(argv[++i]);
+        } else if (arg == "--commission" && i + 1 < argc) {
+            bt_commission = std::stod(argv[++i]);
         } else if (arg == "-h" || arg == "--help") {
             std::cout << "Usage: kraken_trader [OPTIONS]\n"
                       << "Options:\n"
-                      << "  -c, --config <path>  Path to configuration file (default: config/trader.toml)\n"
-                      << "  -v, --verbose        Enable verbose (debug) logging\n"
-                      << "      --tui            Launch interactive terminal UI dashboard\n"
-                      << "  -h, --help           Show this help message\n"
+                      << "  -c, --config <path>      Path to configuration file (default: config/trader.toml)\n"
+                      << "  -v, --verbose            Enable verbose (debug) logging\n"
+                      << "      --tui                Launch interactive terminal UI dashboard\n"
+                      << "      --backtest           Run in backtest mode (replay historical data)\n"
+                      << "      --data <csv_path>    Path to OHLC CSV data file (backtest mode)\n"
+                      << "      --script <lua_path>  Path to Lua strategy script (backtest mode)\n"
+                      << "      --pair <pair>        Trading pair, e.g. XBT/USD (backtest mode, default: XBT/USD)\n"
+                      << "      --balance <amount>   Initial cash balance (backtest mode, default: 10000)\n"
+                      << "      --commission <pct>   Commission percentage (backtest mode, default: 0.1)\n"
+                      << "  -h, --help               Show this help message\n"
                       << std::endl;
             return 0;
         } else {
             std::cerr << "Unknown argument: " << arg << std::endl;
             return 1;
         }
+    }
+
+    // --- Backtest mode ---
+    if (backtest_mode) {
+        if (bt_data_file.empty()) {
+            std::cerr << "[ERROR] --backtest requires --data <csv_path>" << std::endl;
+            return 1;
+        }
+        if (bt_script_file.empty()) {
+            std::cerr << "[ERROR] --backtest requires --script <lua_path>" << std::endl;
+            return 1;
+        }
+
+        // Initialize minimal logging for backtest
+        trader::LogConfig log_cfg;
+        log_cfg.level = verbose ? "debug" : "info";
+        log_cfg.console_output = true;
+        log_cfg.file_output = false;
+        trader::init_logging(log_cfg);
+
+        std::cout << "[BACKTEST] Running backtest..." << std::endl;
+        std::cout << "  Data:       " << bt_data_file << std::endl;
+        std::cout << "  Script:     " << bt_script_file << std::endl;
+        std::cout << "  Pair:       " << bt_pair << std::endl;
+        std::cout << "  Balance:    $" << bt_balance << std::endl;
+        std::cout << "  Commission: " << bt_commission << "%" << std::endl;
+        std::cout << std::endl;
+
+        trader::BacktestConfig bt_config;
+        bt_config.data_file = bt_data_file;
+        bt_config.script_file = bt_script_file;
+        bt_config.pair = bt_pair;
+        bt_config.initial_balance = bt_balance;
+        bt_config.commission_pct = bt_commission;
+
+        trader::BacktestEngine engine(bt_config);
+        if (!engine.run()) {
+            std::cerr << "[ERROR] Backtest failed: " << engine.last_error() << std::endl;
+            return 1;
+        }
+
+        trader::print_performance_report(engine.result(), engine.broker());
+        return 0;
     }
 
     // --- Load configuration ---

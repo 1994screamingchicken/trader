@@ -1,0 +1,37 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Implement a complete backtesting engine that replays historical OHLC data through existing Lua trading scripts unchanged, with performance reporting at the end.",
+  "status": "in_progress",
+  "steps": [
+    "1. Add backtest config structures to include/core/config.hpp: BacktestConfig struct with fields for data_file (CSV path), pair, start_date, end_date, initial_balance, and commission_pct. Add a BacktestResult struct to hold performance metrics (total_pnl, num_trades, win_rate, max_drawdown, sharpe_ratio, etc.).",
+    "2. Create include/backtest/data_feed.hpp: DataFeed class that reads a CSV file of OHLC candles (columns: timestamp, open, high, low, close, volume) and provides iteration. Support Kraken's OHLC format. Provide a method to generate synthetic ticker data from each candle (last price = close).",
+    "3. Create src/backtest/data_feed.cpp: Implement CSV parsing (no external deps, use std::ifstream + string splitting). Each row becomes an OhlcCandle struct {int64_t timestamp; double open, high, low, close, volume;}. Store candles in a vector for random access.",
+    "4. Create include/backtest/backtest_engine.hpp: BacktestEngine class that owns a DataFeed, a simulated portfolio (cash + positions), and an order book. It creates a LuaEngine instance but replaces the KrakenRestClient with a BacktestRestClient that serves historical data instead of making HTTP calls. Key methods: run(script_path, params, config) -> BacktestResult, and internal step() that advances one candle.",
+    "5. Create include/backtest/backtest_broker.hpp: BacktestBroker class (simulated exchange). Tracks cash balance, positions map<pair, quantity>, trade log. Methods: execute_market_order(pair, side, volume, current_price, commission) -> fill info; get_equity(current_prices) for drawdown tracking; get_trade_history() for reporting.",
+    "6. Create src/backtest/backtest_broker.cpp: Implement the simulated broker. Market orders fill instantly at current candle close price. Limit orders fill if price crosses the limit during the candle (check high/low). Track each fill as a Trade struct {timestamp, pair, side, volume, price, commission, pnl}.",
+    "7. Create include/backtest/backtest_rest_client.hpp: BacktestRestClient that inherits or duck-types KrakenRestClient's interface. get_ticker() returns synthetic ticker from current candle. get_ohlc() returns the history up to current candle index. place_order() delegates to BacktestBroker. get_balance() returns simulated balance. All private endpoints return simulated data.",
+    "8. Create src/backtest/backtest_rest_client.cpp: Implement the mock client. Format responses in the same JSON structure that Kraken returns (so LuaEngine's json_to_lua works correctly). For get_ticker: return {pair: {a:[], b:[], c:[close,'vol'], v:[], ...}}. For get_ohlc: return array of [time, open, high, low, close, vwap, volume, count].",
+    "9. Create src/backtest/backtest_engine.cpp: Main backtest loop - load script into LuaEngine (using BacktestRestClient + null ws_client), call on_init(), iterate over candles calling on_tick() for each, then call on_stop(). After loop, compute BacktestResult from BacktestBroker's trade history.",
+    "10. Create src/backtest/performance.hpp and src/backtest/performance.cpp: Compute performance metrics from trade log and equity curve. Metrics: total P&L, return %, number of trades, win rate, profit factor, max drawdown, max drawdown %, Sharpe ratio (assume 0 risk-free rate), average trade duration. Print a formatted report to stdout.",
+    "11. Add --backtest CLI mode to src/main.cpp: Parse --backtest flag along with --data <csv_path>, --script <lua_path>, --pair <pair>, --balance <amount>, --commission <pct>. When --backtest is set, skip all live trading setup (no WebSocket, no API connectivity check), create BacktestEngine, run it, print the performance report, and exit.",
+    "12. Update CMakeLists.txt: Add the new source files (src/backtest/data_feed.cpp, src/backtest/backtest_broker.cpp, src/backtest/backtest_rest_client.cpp, src/backtest/backtest_engine.cpp, src/backtest/performance.cpp) to the trader_lib target.",
+    "13. Create a sample data file at data/sample_btc_1h.csv with ~100 rows of realistic BTC/USD hourly OHLC data for testing. Include a header row: timestamp,open,high,low,close,volume.",
+    "14. Create a docs/BACKTESTING.md documenting usage: how to obtain historical data from Kraken (curl example for /0/public/OHLC), CSV format expected, command-line flags, example invocation, and interpreting the performance report."
+  ],
+  "acceptance_criteria": [
+    "Project compiles cleanly with `make -j$(nproc)` in the build directory after cmake reconfiguration",
+    "`./kraken_trader --help` shows the --backtest flag and related options (--data, --script, --pair, --balance, --commission)",
+    "`./kraken_trader --backtest --data data/sample_btc_1h.csv --script scripts/simple_momentum.lua --pair XBT/USD --balance 10000 --commission 0.1` runs without crashing and prints a performance report with P&L, trade count, win rate, and max drawdown",
+    "Lua scripts (simple_momentum.lua, top_crypto_trader.lua) work with the backtest engine WITHOUT any modifications - the same trader.* API works",
+    "The BacktestRestClient returns data in the same JSON format as KrakenRestClient so json_to_lua conversion works identically",
+    "docs/BACKTESTING.md exists with usage instructions"
+  ],
+  "verification": [
+    "cd /projects/sandbox/trader/build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc)",
+    "./kraken_trader --help | grep backtest",
+    "./kraken_trader --backtest --data ../data/sample_btc_1h.csv --script ../scripts/simple_momentum.lua --pair XBT/USD --balance 10000 --commission 0.1"
+  ],
+  "blocked_reason": null,
+  "findings": ""
+}

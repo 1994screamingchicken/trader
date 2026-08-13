@@ -69,62 +69,62 @@ using RateLimitCallback = std::function<bool()>;
 class KrakenRestClient {
 public:
     KrakenRestClient(const KrakenConfig& config, bool paper_trading = true);
-    ~KrakenRestClient();
+    virtual ~KrakenRestClient();
 
     // --- Public API (no authentication required) ---
 
     /// Get server time
-    ApiResult get_server_time();
+    virtual ApiResult get_server_time();
 
     /// Get tradeable asset pairs info
-    ApiResult get_asset_pairs(const std::string& pair = "");
+    virtual ApiResult get_asset_pairs(const std::string& pair = "");
 
     /// Get ticker information for a pair
-    ApiResult get_ticker(const std::string& pair);
+    virtual ApiResult get_ticker(const std::string& pair);
 
     /// Get OHLC (candle) data
-    ApiResult get_ohlc(const std::string& pair, int interval = 1, int64_t since = 0);
+    virtual ApiResult get_ohlc(const std::string& pair, int interval = 1, int64_t since = 0);
 
     /// Get order book depth
-    ApiResult get_order_book(const std::string& pair, int count = 25);
+    virtual ApiResult get_order_book(const std::string& pair, int count = 25);
 
     /// Get recent trades
-    ApiResult get_recent_trades(const std::string& pair, int64_t since = 0);
+    virtual ApiResult get_recent_trades(const std::string& pair, int64_t since = 0);
 
     // --- Private API (authentication required) ---
 
     /// Get account balance
-    ApiResult get_balance();
+    virtual ApiResult get_balance();
 
     /// Get trade balance (equity, margin, etc.)
-    ApiResult get_trade_balance(const std::string& asset = "ZUSD");
+    virtual ApiResult get_trade_balance(const std::string& asset = "ZUSD");
 
     /// Get open orders
-    ApiResult get_open_orders();
+    virtual ApiResult get_open_orders();
 
     /// Get closed orders
-    ApiResult get_closed_orders(int64_t start = 0, int64_t end = 0);
+    virtual ApiResult get_closed_orders(int64_t start = 0, int64_t end = 0);
 
     /// Query specific orders by transaction ID
-    ApiResult query_orders(const std::string& txid);
+    virtual ApiResult query_orders(const std::string& txid);
 
     /// Place a new order
-    ApiResult place_order(const OrderRequest& order);
+    virtual ApiResult place_order(const OrderRequest& order);
 
     /// Cancel an order
-    ApiResult cancel_order(const std::string& txid);
+    virtual ApiResult cancel_order(const std::string& txid);
 
     /// Cancel all open orders
-    ApiResult cancel_all_orders();
+    virtual ApiResult cancel_all_orders();
 
     /// Get open positions
-    ApiResult get_open_positions();
+    virtual ApiResult get_open_positions();
 
     /// Get trade history
-    ApiResult get_trades_history(int64_t start = 0, int64_t end = 0);
+    virtual ApiResult get_trades_history(int64_t start = 0, int64_t end = 0);
 
     /// Get WebSocket authentication token
-    ApiResult get_ws_token();
+    virtual ApiResult get_ws_token();
 
     // --- Configuration ---
 

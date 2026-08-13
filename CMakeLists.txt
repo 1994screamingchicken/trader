@@ -105,6 +105,12 @@ add_library(trader_lib STATIC
     # TUI
     src/tui/tui_app.cpp
     src/tui/log_sink.cpp
+    # Backtest
+    src/backtest/data_feed.cpp
+    src/backtest/backtest_broker.cpp
+    src/backtest/backtest_rest_client.cpp
+    src/backtest/backtest_engine.cpp
+    src/backtest/performance.cpp
 )
 
 target_include_directories(trader_lib PUBLIC

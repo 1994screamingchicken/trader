@@ -1,0 +1,30 @@
+{
+  "project_type": "C++20 automated crypto trading platform with embedded Lua scripting",
+  "language": "C++20",
+  "build_system": "CMake 4.4.2 with FetchContent (sol2, nlohmann/json, spdlog, tomlplusplus, FTXUI). System packages: Boost 1.75, Lua 5.4, OpenSSL, libcurl. GCC 11.5 available on host.",
+  "test_framework": "No tests directory currently exists. CMakeLists.txt has BUILD_TESTS option with Google Test fetch, but tests/ does not exist yet.",
+  "build_command": "cd /projects/sandbox/trader/build && make -j$(nproc)",
+  "test_command": "No existing tests to run. Verification is compile-only for now.",
+  "verification_instructions": "1. Run `cd /projects/sandbox/trader/build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc)` to confirm the project compiles. 2. Run `./kraken_trader --help` to verify the new --backtest flag appears. 3. Run a sample backtest with dummy CSV data to confirm end-to-end execution.",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "cd /projects/sandbox/trader/build && cmake .. -DCMAKE_BUILD_TYPE=Release && make -j$(nproc)",
+  "environment_constraints": "GCC 11.5 (not 16.2.1 as mentioned). All system deps pre-installed. Network access available for FetchContent GitHub pulls. No Docker daemon confirmed.",
+  "contribution_requirements": "Commit to feature/kraken-lua-trader branch. No CONTRIBUTING.md exists.",
+  "key_patterns": "Scripts implement on_init/on_tick/on_data/on_stop callbacks. LuaEngine exposes trader.* API (get_ticker, get_ohlc, market_order, limit_order). KrakenRestClient has paper_trading mode that simulates orders. ScriptManager orchestrates multiple scripts with tick_all(). Config loaded from TOML via tomlplusplus. Main loop ticks at configurable interval.",
+  "relevant_files": [
+    "include/scripting/lua_engine.hpp",
+    "src/scripting/lua_engine.cpp",
+    "include/scripting/script_manager.hpp",
+    "src/scripting/script_manager.cpp",
+    "include/kraken/rest_client.hpp",
+    "src/kraken/rest_client.cpp",
+    "include/core/config.hpp",
+    "src/core/config.cpp",
+    "src/main.cpp",
+    "config/trader.toml",
+    "CMakeLists.txt",
+    "scripts/simple_momentum.lua",
+    "scripts/top_crypto_trader.lua"
+  ],
+  "directory_structure": "src/ - implementation files organized by module (core, kraken, scripting, safety, tui). include/ - headers mirroring src/ layout. scripts/ - Lua trading scripts. examples/ - more Lua strategy examples. config/ - TOML config files. build/ - pre-existing build dir. third_party/ and cmake/ - empty."
+}

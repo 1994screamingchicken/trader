@@ -1,0 +1,7 @@
+{
+  "task_id": "task-backtest-engine",
+  "task_description": "Add a backtesting engine to the Kraken Lua Trader that replays historical OHLC data through existing Lua trading scripts (unchanged), simulates order execution, and produces a performance report (P&L, trades, win rate, drawdown, Sharpe ratio). Invoked via --backtest CLI flag.",
+  "status": "in_progress",
+  "feature_order": ["FEAT-001"],
+  "blocked_reason": null
+}

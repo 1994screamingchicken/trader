@@ -12,9 +12,13 @@
 #include "scripting/script_manager.hpp"
 #include "safety/rate_limiter.hpp"
 #include "safety/risk_manager.hpp"
+#include "tui/tui_app.hpp"
+#include "tui/log_sink.hpp"
+
+// g_running has external linkage for TUI module coordinated shutdown
+std::atomic<bool> g_running{true};
 
 namespace {
-    std::atomic<bool> g_running{true};
     std::atomic<bool> g_emergency{false};
 
     void signal_handler(int signum) {
@@ -67,6 +71,7 @@ int main(int argc, char* argv[]) {
     // --- Parse command line arguments ---
     std::filesystem::path config_path = "config/trader.toml";
     bool verbose = false;
+    bool use_tui = false;
 
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
@@ -74,11 +79,14 @@ int main(int argc, char* argv[]) {
             config_path = argv[++i];
         } else if (arg == "-v" || arg == "--verbose") {
             verbose = true;
+        } else if (arg == "--tui") {
+            use_tui = true;
         } else if (arg == "-h" || arg == "--help") {
             std::cout << "Usage: kraken_trader [OPTIONS]\n"
                       << "Options:\n"
                       << "  -c, --config <path>  Path to configuration file (default: config/trader.toml)\n"
                       << "  -v, --verbose        Enable verbose (debug) logging\n"
+                      << "      --tui            Launch interactive terminal UI dashboard\n"
                       << "  -h, --help           Show this help message\n"
                       << std::endl;
             return 0;
@@ -192,50 +200,65 @@ int main(int argc, char* argv[]) {
     }
 
     logger->info("Entering main loop (tick interval: {}ms)", config.tick_interval_ms);
-    std::cout << "\n[RUNNING] Press Ctrl+C to stop gracefully (twice to force quit)\n" << std::endl;
 
-    // --- Main event loop ---
-    auto tick_duration = std::chrono::milliseconds(config.tick_interval_ms);
-    int status_counter = 0;
-    constexpr int STATUS_INTERVAL = 100;  // Print status every N ticks
+    if (use_tui) {
+        // --- TUI Mode ---
+        // Register the ring-buffer log sink so output feeds into the TUI panel
+        auto tui_sink = std::make_shared<trader::RingBufferSink_mt>(100);
+        tui_sink->set_pattern("[%H:%M:%S] [%l] %v");
+        logger->sinks().push_back(tui_sink);
 
-    while (g_running) {
-        auto tick_start = std::chrono::steady_clock::now();
+        trader::TuiApp tui_app(script_manager, rate_limiter, risk_manager,
+                               rest_client, ws_client, config, tui_sink);
 
-        // Process WebSocket messages
-        if (ws_connected && ws_client->is_connected()) {
-            ws_client->poll();
-        }
+        logger->info("TUI mode active");
+        tui_app.run();
+    } else {
+        // --- Classic text-based main loop ---
+        std::cout << "\n[RUNNING] Press Ctrl+C to stop gracefully (twice to force quit)\n" << std::endl;
 
-        // Tick all running scripts
-        script_manager.tick_all();
+        auto tick_duration = std::chrono::milliseconds(config.tick_interval_ms);
+        int status_counter = 0;
+        constexpr int STATUS_INTERVAL = 100;  // Print status every N ticks
 
-        // Periodic status logging
-        status_counter++;
-        if (status_counter >= STATUS_INTERVAL) {
-            status_counter = 0;
+        while (g_running) {
+            auto tick_start = std::chrono::steady_clock::now();
 
-            // Log rate limiter stats
-            logger->debug("Rate limiter: allowed={}, rejected={}",
-                          rate_limiter->total_allowed(), rate_limiter->total_rejected());
-
-            // Check risk status
-            if (risk_manager->limits_breached()) {
-                logger->critical("Risk limits breached: {}", risk_manager->breach_description());
+            // Process WebSocket messages
+            if (ws_connected && ws_client->is_connected()) {
+                ws_client->poll();
             }
-        }
 
-        // Check for emergency stop
-        if (g_emergency) {
-            logger->critical("Emergency stop triggered - shutting down");
-            std::cerr << "\n[EMERGENCY] Risk limits breached - all scripts halted!" << std::endl;
-            break;
-        }
+            // Tick all running scripts
+            script_manager.tick_all();
 
-        // Sleep for remainder of tick interval
-        auto elapsed = std::chrono::steady_clock::now() - tick_start;
-        if (elapsed < tick_duration) {
-            std::this_thread::sleep_for(tick_duration - elapsed);
+            // Periodic status logging
+            status_counter++;
+            if (status_counter >= STATUS_INTERVAL) {
+                status_counter = 0;
+
+                // Log rate limiter stats
+                logger->debug("Rate limiter: allowed={}, rejected={}",
+                              rate_limiter->total_allowed(), rate_limiter->total_rejected());
+
+                // Check risk status
+                if (risk_manager->limits_breached()) {
+                    logger->critical("Risk limits breached: {}", risk_manager->breach_description());
+                }
+            }
+
+            // Check for emergency stop
+            if (g_emergency) {
+                logger->critical("Emergency stop triggered - shutting down");
+                std::cerr << "\n[EMERGENCY] Risk limits breached - all scripts halted!" << std::endl;
+                break;
+            }
+
+            // Sleep for remainder of tick interval
+            auto elapsed = std::chrono::steady_clock::now() - tick_start;
+            if (elapsed < tick_duration) {
+                std::this_thread::sleep_for(tick_duration - elapsed);
+            }
         }
     }
 

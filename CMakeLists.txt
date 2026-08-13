@@ -45,7 +45,17 @@ FetchContent_Declare(
     GIT_TAG v3.4.0
 )
 
-FetchContent_MakeAvailable(json sol2 spdlog tomlplusplus)
+# FTXUI for terminal user interface
+set(FTXUI_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(FTXUI_BUILD_DOCS OFF CACHE BOOL "" FORCE)
+set(FTXUI_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(
+    ftxui
+    GIT_REPOSITORY https://github.com/ArthurSonzogni/FTXUI.git
+    GIT_TAG v5.0.0
+)
+
+FetchContent_MakeAvailable(json sol2 spdlog tomlplusplus ftxui)
 
 # Find Boost (Beast is header-only, part of Boost since 1.66)
 find_package(Boost 1.66 REQUIRED)
@@ -88,6 +98,9 @@ add_library(trader_lib STATIC
     # Safety
     src/safety/rate_limiter.cpp
     src/safety/risk_manager.cpp
+    # TUI
+    src/tui/tui_app.cpp
+    src/tui/log_sink.cpp
 )
 
 target_include_directories(trader_lib PUBLIC
@@ -107,6 +120,9 @@ target_link_libraries(trader_lib PUBLIC
     sol2
     spdlog::spdlog
     tomlplusplus::tomlplusplus
+    ftxui::screen
+    ftxui::dom
+    ftxui::component
     ${LUA_LIBRARIES}
 )
 

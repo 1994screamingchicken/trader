@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <span>
 #include <cstdint>
 #include <filesystem>
 
@@ -39,8 +40,8 @@ public:
     /// Get all candles
     const std::vector<OhlcCandle>& candles() const { return candles_; }
 
-    /// Get candles up to (and including) a given index
-    std::vector<OhlcCandle> candles_up_to(size_t index) const;
+    /// Get a view of candles up to (and including) a given index (no copy)
+    std::span<const OhlcCandle> candles_up_to(size_t index) const;
 
     /// Get the last error message
     const std::string& last_error() const { return last_error_; }

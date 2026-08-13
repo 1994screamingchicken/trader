@@ -137,6 +137,11 @@ public:
     /// Check if in paper trading mode
     bool is_paper_trading() const { return paper_trading_; }
 
+protected:
+    /// Protected constructor that skips curl initialization (for backtest subclasses)
+    struct SkipCurlInit {};
+    KrakenRestClient(const KrakenConfig& config, bool paper_trading, SkipCurlInit);
+
 private:
     /// Perform a public API GET/POST request
     ApiResult public_request(const std::string& endpoint, const std::string& params = "");
@@ -158,6 +163,7 @@ private:
     std::unique_ptr<KrakenAuth> auth_;
     RateLimitCallback rate_limit_callback_;
     bool paper_trading_;
+    bool skip_curl_cleanup_ = false;
 };
 
 }  // namespace trader

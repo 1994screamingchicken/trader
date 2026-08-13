@@ -99,9 +99,21 @@ int main(int argc, char* argv[]) {
         } else if (arg == "--pair" && i + 1 < argc) {
             bt_pair = argv[++i];
         } else if (arg == "--balance" && i + 1 < argc) {
-            bt_balance = std::stod(argv[++i]);
+            try {
+                bt_balance = std::stod(argv[++i]);
+            } catch (const std::exception&) {
+                std::cerr << "[ERROR] Invalid value for --balance: " << argv[i]
+                          << " (expected a number)" << std::endl;
+                return 1;
+            }
         } else if (arg == "--commission" && i + 1 < argc) {
-            bt_commission = std::stod(argv[++i]);
+            try {
+                bt_commission = std::stod(argv[++i]);
+            } catch (const std::exception&) {
+                std::cerr << "[ERROR] Invalid value for --commission: " << argv[i]
+                          << " (expected a number)" << std::endl;
+                return 1;
+            }
         } else if (arg == "-h" || arg == "--help") {
             std::cout << "Usage: kraken_trader [OPTIONS]\n"
                       << "Options:\n"

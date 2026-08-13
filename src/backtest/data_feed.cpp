@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <span>
 
 namespace trader {
 
@@ -85,11 +86,11 @@ bool DataFeed::load(const std::filesystem::path& csv_path) {
     return true;
 }
 
-std::vector<OhlcCandle> DataFeed::candles_up_to(size_t index) const {
+std::span<const OhlcCandle> DataFeed::candles_up_to(size_t index) const {
     if (index >= candles_.size()) {
-        return candles_;
+        return std::span<const OhlcCandle>(candles_);
     }
-    return std::vector<OhlcCandle>(candles_.begin(), candles_.begin() + index + 1);
+    return std::span<const OhlcCandle>(candles_.data(), index + 1);
 }
 
 }  // namespace trader

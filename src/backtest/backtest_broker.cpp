@@ -48,6 +48,17 @@ bool BacktestBroker::execute_market_order(const std::string& pair, OrderSide sid
         }
 
     } else {  // Sell
+        // Check if we have a position to sell (no naked shorting allowed)
+        if (current_pos <= 0) {
+            return false;  // Cannot sell without a long position
+        }
+        // Cannot sell more than current position
+        if (volume > current_pos) {
+            volume = current_pos;
+            notional = volume * current_price;
+            commission = notional * (commission_pct_ / 100.0);
+        }
+
         // If we're long, this is closing (partially or fully)
         if (current_pos > 0) {
             double close_volume = std::min(volume, current_pos);
@@ -60,14 +71,7 @@ bool BacktestBroker::execute_market_order(const std::string& pair, OrderSide sid
         cash_ += revenue;
         positions_[pair] -= volume;
 
-        // Update average entry price for new short
-        if (current_pos >= 0 && positions_[pair] < 0) {
-            avg_entry_prices_[pair] = current_price;
-        } else if (current_pos < 0) {
-            // Adding to existing short
-            double total_cost = avg_entry_prices_[pair] * std::abs(current_pos) + current_price * volume;
-            avg_entry_prices_[pair] = total_cost / (std::abs(current_pos) + volume);
-        }
+        // No short position tracking needed - naked shorting is not allowed
     }
 
     // Clean up zero positions

@@ -19,7 +19,7 @@ namespace {
 
 BacktestRestClient::BacktestRestClient(DataFeed& feed, BacktestBroker& broker,
                                        const std::string& pair)
-    : KrakenRestClient(make_dummy_config(), true),
+    : KrakenRestClient(make_dummy_config(), true, SkipCurlInit{}),
       feed_(feed),
       broker_(broker),
       pair_(pair) {
@@ -123,7 +123,7 @@ ApiResult BacktestRestClient::get_ohlc(const std::string& pair, int /*interval*/
 
     json data;
     data[kraken_pair] = ohlc_array;
-    data["last"] = candles.empty() ? 0 : candles.back().timestamp;
+    data["last"] = candles.empty() ? int64_t{0} : candles.back().timestamp;
     return ApiResult::ok(data);
 }
 

@@ -76,6 +76,11 @@ bool BacktestEngine::run() {
         std::string no_slash = config_.pair;
         no_slash.erase(std::remove(no_slash.begin(), no_slash.end(), '/'), no_slash.end());
         prices[no_slash] = candle.close;
+        // Also add Kraken internal format (e.g., "XXBTZUSD") for scripts using that format
+        if (no_slash.size() == 6) {
+            std::string kraken_fmt = "X" + no_slash.substr(0, 3) + "Z" + no_slash.substr(3);
+            prices[kraken_fmt] = candle.close;
+        }
         double equity = broker_->get_equity(prices);
         broker_->record_equity(equity);
     }

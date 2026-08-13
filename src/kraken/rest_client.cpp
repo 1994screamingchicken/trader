@@ -44,8 +44,17 @@ KrakenRestClient::KrakenRestClient(const KrakenConfig& config, bool paper_tradin
     curl_global_init(CURL_GLOBAL_ALL);
 }
 
+KrakenRestClient::KrakenRestClient(const KrakenConfig& config, bool paper_trading, SkipCurlInit)
+    : config_(config),
+      auth_(std::make_unique<KrakenAuth>(config.api_key, config.api_secret)),
+      paper_trading_(paper_trading),
+      skip_curl_cleanup_(true) {
+}
+
 KrakenRestClient::~KrakenRestClient() {
-    curl_global_cleanup();
+    if (!skip_curl_cleanup_) {
+        curl_global_cleanup();
+    }
 }
 
 // ==================== Public API ====================

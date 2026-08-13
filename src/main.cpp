@@ -18,9 +18,10 @@
 // g_running has external linkage for TUI module coordinated shutdown
 std::atomic<bool> g_running{true};
 
-namespace {
-    std::atomic<bool> g_emergency{false};
+// g_emergency has external linkage so the TUI can detect risk-limit breaches
+std::atomic<bool> g_emergency{false};
 
+namespace {
     void signal_handler(int signum) {
         if (signum == SIGINT || signum == SIGTERM) {
             if (g_running) {

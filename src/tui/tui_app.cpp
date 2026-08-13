@@ -21,8 +21,9 @@
 #include "kraken/websocket_client.hpp"
 #include "core/logger.hpp"
 
-// External signal flag (defined in main.cpp with external linkage)
+// External signal flags (defined in main.cpp with external linkage)
 extern std::atomic<bool> g_running;
+extern std::atomic<bool> g_emergency;
 
 namespace trader {
 
@@ -146,7 +147,7 @@ void TuiApp::run() {
         if (price_rows.empty()) {
             price_rows.push_back(text(" No price data") | dim);
         }
-        auto prices_panel = vbox(std::move(price_rows)) | border | flex;
+        auto prices_panel = vbox(std::move(price_rows)) | flex;
 
         // --- Account / P&L panel ---
         double total_pnl = risk_manager_->total_pnl();
@@ -296,7 +297,7 @@ void TuiApp::run() {
         // Bottom rows: logs, status bar
 
         auto left_column = vbox({
-            window(text(" Live Prices "), vbox(price_rows)) | flex_shrink,
+            window(text(" Live Prices "), prices_panel) | flex_shrink,
             pnl_panel | flex_shrink,
             rl_panel | flex_shrink,
             rm_panel | flex_shrink,
@@ -342,6 +343,15 @@ void TuiApp::run() {
     std::atomic<bool> bg_running{true};
     std::thread bg_thread([&]() {
         while (bg_running && running_ && g_running) {
+            // Check for emergency stop
+            if (g_emergency) {
+                auto logger = spdlog::default_logger();
+                logger->critical("Emergency stop triggered - shutting down TUI");
+                stop();
+                screen.Post([&] { screen.Exit(); });
+                return;
+            }
+
             auto tick_start = std::chrono::steady_clock::now();
 
             // Poll WebSocket
@@ -363,13 +373,17 @@ void TuiApp::run() {
                 std::this_thread::sleep_for(tick_duration - elapsed);
             }
         }
+        // Signal FTXUI to exit when g_running becomes false (e.g., Ctrl+C)
+        screen.Post([&] { screen.Exit(); });
     });
 
     // Also run a separate refresh thread at ~4Hz for smoother UI updates
     std::thread refresh_thread([&]() {
         while (bg_running && running_ && g_running) {
             std::this_thread::sleep_for(std::chrono::milliseconds(250));
-            screen.Post(Event::Custom);
+            if (bg_running && running_ && g_running) {
+                screen.Post(Event::Custom);
+            }
         }
     });
 

@@ -12,8 +12,10 @@ namespace trader {
 
 /// A thread-safe ring-buffer sink for spdlog that stores the last N log messages.
 /// Used by the TUI to display recent log output in a scrollable panel.
+/// Uses null_mutex for the base class and relies solely on buffer_mutex_ for
+/// thread safety, avoiding double-locking on every log call.
 template<typename Mutex>
-class RingBufferSinkT : public spdlog::sinks::base_sink<Mutex> {
+class RingBufferSinkT : public spdlog::sinks::base_sink<spdlog::details::null_mutex> {
 public:
     explicit RingBufferSinkT(size_t max_messages = 100)
         : max_messages_(max_messages) {}
@@ -39,7 +41,7 @@ public:
 protected:
     void sink_it_(const spdlog::details::log_msg& msg) override {
         spdlog::memory_buf_t formatted;
-        spdlog::sinks::base_sink<Mutex>::formatter_->format(msg, formatted);
+        spdlog::sinks::base_sink<spdlog::details::null_mutex>::formatter_->format(msg, formatted);
         std::string message = fmt::to_string(formatted);
 
         std::lock_guard<std::mutex> lock(buffer_mutex_);

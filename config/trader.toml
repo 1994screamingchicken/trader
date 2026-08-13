@@ -2,8 +2,8 @@
 # ================================
 
 [general]
-# Directory containing Lua trading scripts
-scripts_directory = "scripts"
+# Directory containing Lua trading scripts (use "." for project root so both scripts/ and examples/ work)
+scripts_directory = "."
 # Main loop tick interval in milliseconds
 tick_interval_ms = 200
 # Paper trading mode (no real orders placed)
@@ -38,14 +38,14 @@ enforce_position_limits = true
 enforce_loss_limits = true
 
 [rate_limit]
-# Maximum API calls per second (global)
-max_calls_per_second = 1
-# Maximum API calls per minute (global)
-max_calls_per_minute = 45
+# Maximum API calls per second (global) - relaxed for paper trading
+max_calls_per_second = 3
+# Maximum API calls per minute (global) - relaxed for paper trading
+max_calls_per_minute = 120
 # Cooldown period in seconds after hitting rate limit
 cooldown_seconds = 30
-# Per-script rate limit (calls per minute)
-per_script_calls_per_minute = 10
+# Per-script rate limit (calls per minute) - relaxed for paper trading
+per_script_calls_per_minute = 20
 
 [logging]
 # Log level: trace, debug, info, warn, error, critical
@@ -63,101 +63,31 @@ max_files = 5
 
 # Script definitions
 # Each [[scripts]] entry defines a trading script to load
-# Top 10 cryptocurrencies by market cap on Kraken
+# 3 instances of top_crypto_trader for BTC, ETH, and SOL
 
 [[scripts]]
-name = "momentum_btc"
-path = "scripts/simple_momentum.lua"
+name = "top_crypto_btc"
+path = "scripts/top_crypto_trader.lua"
 auto_start = true
 [scripts.parameters]
 pair = "XBT/USD"
-threshold = "0.5"
+threshold = "0.3"
 quantity = "0.001"
 
 [[scripts]]
-name = "mean_reversion_eth"
-path = "scripts/mean_reversion.lua"
+name = "top_crypto_eth"
+path = "scripts/top_crypto_trader.lua"
 auto_start = true
 [scripts.parameters]
 pair = "ETH/USD"
-lookback = "20"
-deviation = "2.0"
+threshold = "0.3"
 quantity = "0.01"
 
 [[scripts]]
-name = "ema_crossover_sol"
-path = "examples/ema_crossover.lua"
+name = "top_crypto_sol"
+path = "scripts/top_crypto_trader.lua"
 auto_start = true
 [scripts.parameters]
 pair = "SOL/USD"
-fast_period = "9"
-slow_period = "21"
+threshold = "0.3"
 quantity = "0.5"
-
-[[scripts]]
-name = "grid_trader_xrp"
-path = "scripts/grid_trader.lua"
-auto_start = true
-[scripts.parameters]
-pair = "XRP/USD"
-grid_levels = "10"
-grid_spacing = "0.02"
-quantity = "50"
-
-[[scripts]]
-name = "momentum_ada"
-path = "scripts/simple_momentum.lua"
-auto_start = true
-[scripts.parameters]
-pair = "ADA/USD"
-threshold = "0.8"
-quantity = "100"
-
-[[scripts]]
-name = "mean_reversion_dot"
-path = "scripts/mean_reversion.lua"
-auto_start = true
-[scripts.parameters]
-pair = "DOT/USD"
-lookback = "15"
-deviation = "1.5"
-quantity = "5"
-
-[[scripts]]
-name = "ema_crossover_avax"
-path = "examples/ema_crossover.lua"
-auto_start = true
-[scripts.parameters]
-pair = "AVAX/USD"
-fast_period = "12"
-slow_period = "26"
-quantity = "2"
-
-[[scripts]]
-name = "grid_trader_link"
-path = "scripts/grid_trader.lua"
-auto_start = true
-[scripts.parameters]
-pair = "LINK/USD"
-grid_levels = "8"
-grid_spacing = "0.03"
-quantity = "5"
-
-[[scripts]]
-name = "mean_reversion_matic"
-path = "scripts/mean_reversion.lua"
-auto_start = true
-[scripts.parameters]
-pair = "MATIC/USD"
-lookback = "25"
-deviation = "2.5"
-quantity = "200"
-
-[[scripts]]
-name = "momentum_doge"
-path = "scripts/simple_momentum.lua"
-auto_start = true
-[scripts.parameters]
-pair = "DOGE/USD"
-threshold = "1.0"
-quantity = "500"

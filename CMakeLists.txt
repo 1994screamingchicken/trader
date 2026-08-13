@@ -1,4 +1,8 @@
 cmake_minimum_required(VERSION 3.20)
+# Allow FindBoost module (removed in CMake 4.0, policy CMP0167)
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 OLD)
+endif()
 project(KrakenLuaTrader VERSION 1.0.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)

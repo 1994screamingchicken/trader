@@ -46,9 +46,9 @@ bool ScriptManager::load_script(const ScriptEntry& entry) {
         return false;
     }
 
-    // Resolve script path relative to scripts directory
+    // Resolve script path - use directly if it exists, otherwise prepend scripts_directory
     std::filesystem::path script_path = entry.path;
-    if (script_path.is_relative()) {
+    if (script_path.is_relative() && !std::filesystem::exists(script_path)) {
         script_path = config_.scripts_directory / script_path;
     }
 
@@ -202,7 +202,7 @@ bool ScriptManager::restart_script(const std::string& name) {
     }
 
     std::filesystem::path script_path = script->config.path;
-    if (script_path.is_relative()) {
+    if (script_path.is_relative() && !std::filesystem::exists(script_path)) {
         script_path = config_.scripts_directory / script_path;
     }
 

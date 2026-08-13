@@ -52,7 +52,14 @@ FetchContent_Declare(
     GIT_TAG v3.4.0
 )
 
-FetchContent_MakeAvailable(json sol2 spdlog websocketpp tomlplusplus)
+# websocketpp is header-only; populate it without processing its outdated
+# CMakeLists.txt which is incompatible with CMake >= 3.30 (cmake_minimum_required < 3.5)
+FetchContent_MakeAvailable(json sol2 spdlog tomlplusplus)
+
+FetchContent_GetProperties(websocketpp)
+if(NOT websocketpp_POPULATED)
+    FetchContent_Populate(websocketpp)
+endif()
 
 # Find Lua
 if(USE_LUAJIT)

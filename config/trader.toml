@@ -67,7 +67,7 @@ max_files = 5
 [[scripts]]
 name = "simple_momentum"
 path = "scripts/simple_momentum.lua"
-auto_start = false
+auto_start = true
 [scripts.parameters]
 pair = "XBT/USD"
 threshold = "0.5"
@@ -76,7 +76,7 @@ quantity = "0.001"
 [[scripts]]
 name = "mean_reversion"
 path = "scripts/mean_reversion.lua"
-auto_start = false
+auto_start = true
 [scripts.parameters]
 pair = "ETH/USD"
 lookback = "20"

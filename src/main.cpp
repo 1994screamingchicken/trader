@@ -180,18 +180,18 @@ int main(int argc, char* argv[]) {
         std::cout << "[OK] Loaded " << loaded << " script(s)" << std::endl;
     }
 
-    // --- Connect WebSocket (optional, for real-time data) ---
+    // --- Connect WebSocket (public feed always, authenticated only with keys) ---
     bool ws_connected = false;
-    if (!config.paper_trading && !config.kraken.api_key.empty()) {
-        try {
-            ws_client->connect();
-            ws_connected = true;
-            logger->info("WebSocket connected for real-time data");
-            std::cout << "[OK] WebSocket connected" << std::endl;
-        } catch (const std::exception& e) {
-            logger->warn("WebSocket connection failed (will use REST polling): {}", e.what());
-            std::cout << "[WARN] WebSocket unavailable, using REST polling" << std::endl;
-        }
+    try {
+        // Public WebSocket (wss://ws.kraken.com) does not require authentication
+        // Always connect for real-time price data, even in paper trading mode
+        ws_client->connect();
+        ws_connected = true;
+        logger->info("Public WebSocket connected for real-time data");
+        std::cout << "[OK] Public WebSocket connected" << std::endl;
+    } catch (const std::exception& e) {
+        logger->warn("Public WebSocket connection failed (will use REST polling): {}", e.what());
+        std::cout << "[WARN] Public WebSocket unavailable, using REST polling" << std::endl;
     }
 
     // --- Start auto-start scripts ---

@@ -33,5 +33,5 @@
     "./kraken_trader --backtest --data ../data/sample_btc_1h.csv --script ../scripts/simple_momentum.lua --pair XBT/USD --balance 10000 --commission 0.1"
   ],
   "blocked_reason": null,
-  "findings": "Made KrakenRestClient methods virtual (destructor + all API methods) to allow BacktestRestClient to inherit and override. The simple_momentum.lua script has check_interval=50 so it only checks price every 50 ticks/candles; in backtest mode each candle is one tick. Both simple_momentum.lua and top_crypto_trader.lua run successfully without modifications. Build compiles cleanly with GCC 11.5."
+  "findings": "Made KrakenRestClient methods virtual (destructor + all API methods) to allow BacktestRestClient to inherit and override. The simple_momentum.lua script has check_interval=50 so it only checks price every 50 ticks/candles; in backtest mode each candle is one tick. Both simple_momentum.lua and top_crypto_trader.lua run successfully without modifications. Build compiles cleanly with GCC 11.5. Review fixes applied: (1) sell-side position guard added, (2) curl init skipped via protected SkipCurlInit constructor, (3) candles_up_to returns std::span instead of vector copy, (4) CLI stod wrapped in try/catch, (5) Kraken internal pair format added to equity price map."
 }

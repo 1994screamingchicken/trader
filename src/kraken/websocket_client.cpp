@@ -1,7 +1,7 @@
 #include "kraken/websocket_client.hpp"
 #include "core/logger.hpp"
 
-#include <websocketpp/config/asio_tls_client.hpp>
+#include <websocketpp/config/asio_client.hpp>
 #include <websocketpp/client.hpp>
 
 #include <thread>
@@ -114,7 +114,7 @@ public:
     }
 
 private:
-    WsClient client_;
+    mutable WsClient client_;
     WsConnectionPtr connection_;
     std::thread ws_thread_;
 };

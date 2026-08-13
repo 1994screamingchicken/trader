@@ -8,6 +8,7 @@
 #include <thread>
 #include <atomic>
 #include <condition_variable>
+#include <spdlog/spdlog.h>
 
 #include "core/config.hpp"
 #include "scripting/lua_engine.hpp"

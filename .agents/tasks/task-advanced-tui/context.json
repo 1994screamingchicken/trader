@@ -1,0 +1,26 @@
+{
+  "project_type": "C++20 automated crypto trading platform with CMake build system",
+  "language": "C++20",
+  "build_system": "CMake 4.4.2 with FetchContent for external dependencies. Build directory is build/. Uses Unix Makefiles generator.",
+  "test_framework": "GoogleTest (optional, BUILD_TESTS=OFF by default). No tests currently built.",
+  "build_command": "cd /projects/sandbox/trader/build && cmake .. && make -j$(nproc)",
+  "test_command": "No tests currently configured for the TUI. Build success is the primary verification.",
+  "verification_instructions": "1. Run cmake and make in build/ directory. 2. Verify kraken_trader binary is produced. 3. Verify FTXUI is fetched and linked correctly.",
+  "snapshot_or_generated_files": null,
+  "setup_instructions": "cd /projects/sandbox/trader/build && cmake .. && make -j$(nproc)",
+  "environment_constraints": "GCC 11.5 available (sandbox). Network available for FetchContent (GitHub). Boost 1.75, Lua 5.4.4, OpenSSL 3.5.7, libcurl 8.17.0 all available. No Docker needed.",
+  "contribution_requirements": "Commit to feature/kraken-lua-trader branch.",
+  "key_patterns": "Namespace: trader::. Headers in include/ mirroring src/ structure. Shared pointers for major components (rest_client, ws_client, rate_limiter, risk_manager). ScriptManager holds all script state. Main loop polls ws_client and ticks scripts at configurable interval. AppConfig loaded from TOML. spdlog for logging.",
+  "relevant_files": [
+    "CMakeLists.txt",
+    "src/main.cpp",
+    "include/core/config.hpp",
+    "include/core/logger.hpp",
+    "include/scripting/script_manager.hpp",
+    "include/kraken/rest_client.hpp",
+    "include/kraken/websocket_client.hpp",
+    "include/safety/rate_limiter.hpp",
+    "include/safety/risk_manager.hpp"
+  ],
+  "directory_structure": "src/ - implementation files (core/, kraken/, scripting/, safety/). include/ - headers with same structure. config/ - trader.toml. scripts/ - Lua trading scripts. examples/ - more Lua scripts. build/ - CMake build output. third_party/ - empty (all deps via FetchContent)."
+}

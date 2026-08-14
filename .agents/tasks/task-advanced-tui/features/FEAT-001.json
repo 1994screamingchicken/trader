@@ -1,0 +1,30 @@
+{
+  "id": "FEAT-001",
+  "type": "feat",
+  "description": "Add FTXUI dependency to CMakeLists.txt and create the TUI module (src/tui/ and include/tui/) with a comprehensive terminal interface showing all system data in real-time panels.",
+  "status": "completed",
+  "steps": [
+    "Add FTXUI FetchContent declaration to CMakeLists.txt (GIT_REPOSITORY https://github.com/ArthurSonzogni/FTXUI.git, GIT_TAG v5.0.0) and add it to FetchContent_MakeAvailable",
+    "Create include/tui/tui_app.hpp - define class TuiApp in namespace trader that takes shared_ptr references to ScriptManager, RateLimiter, RiskManager, KrakenRestClient, KrakenWebSocketClient, and AppConfig. It should have run() (blocking, replaces main loop), stop(), and a refresh rate setting.",
+    "Create src/tui/tui_app.cpp - implement the full TUI using FTXUI's ScreenInteractive::Fullscreen() and a component-based layout with multiple panels: (1) Header bar showing app name, paper/live mode, uptime, WS connection state. (2) Live Prices panel showing ticker data from ws_client->get_ticker(pair) for configured pairs. (3) Account/P&L panel showing total_pnl, per-script pnl, open positions from risk_manager. (4) Scripts panel showing a table of all scripts with columns: Name, State, Ticks, Orders Placed, Orders Cancelled, API Calls, Last Error - data from script_manager.get_all_script_info(). (5) Rate Limiter panel showing total_allowed, total_rejected, cooldown status. (6) Risk Manager panel showing limits_breached status, breach_description, open_order_count, max thresholds from config. (7) Log panel that captures recent log messages (integrate with spdlog via a custom ring-buffer sink). (8) A bottom status bar with keybindings (q=quit, p=pause, r=restart). Use FTXUI's Loop with a custom thread to refresh data at ~4Hz. Use colors (green/red for P&L, yellow for warnings, red for errors/breaches).",
+    "Create include/tui/log_sink.hpp - a custom spdlog sink that stores the last N (e.g., 100) log messages in a thread-safe ring buffer, providing a get_messages() method returning vector<string>.",
+    "Create src/tui/log_sink.cpp - implement the ring buffer log sink.",
+    "Add the new source files (src/tui/tui_app.cpp, src/tui/log_sink.cpp) to the trader_lib STATIC library in CMakeLists.txt, and link ftxui::screen, ftxui::dom, ftxui::component to trader_lib.",
+    "Modify src/main.cpp to: (a) add --tui flag to command line parsing, (b) when --tui is specified, create a TuiApp instance with all the shared components and call tui_app.run() instead of the print-based main loop. Keep the existing non-TUI loop as fallback when --tui is not passed. (c) Register the custom log sink before starting TUI so log output feeds into the TUI panel instead of stdout.",
+    "Ensure keyboard handling: 'q' or Ctrl+C quits gracefully (calls stop on TuiApp which sets g_running=false and triggers shutdown), and the existing signal handler still works."
+  ],
+  "acceptance_criteria": [
+    "cmake .. succeeds in build/ with FTXUI fetched and configured",
+    "make -j$(nproc) succeeds producing the kraken_trader binary",
+    "kraken_trader --help shows the --tui option",
+    "The TUI source files compile without errors or warnings related to FTXUI usage",
+    "include/tui/tui_app.hpp and include/tui/log_sink.hpp exist with proper header guards and namespace",
+    "src/main.cpp supports both TUI and non-TUI modes"
+  ],
+  "verification": [
+    "cd /projects/sandbox/trader/build && cmake .. && make -j$(nproc) 2>&1 | tail -20",
+    "./kraken_trader --help 2>&1 | grep -i tui"
+  ],
+  "blocked_reason": null,
+  "findings": "Build succeeded cleanly with no warnings. FTXUI v5.0.0 fetched and linked without issues. g_running was moved out of anonymous namespace to allow external linkage for TUI module shutdown coordination. GCC 11.5 compiles everything fine."
+}

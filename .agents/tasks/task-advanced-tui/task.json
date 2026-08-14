@@ -1,0 +1,14 @@
+{
+  "task_id": "task-advanced-tui",
+  "task_description": "Add an advanced Terminal User Interface (TUI) using FTXUI to the Kraken Lua Trader, showing live prices, account P&L, script status, order history, rate limiter stats, risk manager status, log output, and system status in real-time panels.",
+  "status": "completed",
+  "feature_order": ["FEAT-001"],
+  "blocked_reason": null,
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "summary": "cmake and make succeed cleanly with zero errors/warnings. FTXUI v5.0.0 fetched and linked. Binary produced with --tui flag working. Semantic review v1 found 5 issues (use-after-move, signal handling, double mutex, missing emergency check, dead code) - all fixed in commit 6d2276b. Review v2 APPROVED."
+  }
+}

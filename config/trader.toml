@@ -1,0 +1,93 @@
+# Kraken Lua Trader Configuration
+# ================================
+
+[general]
+# Directory containing Lua trading scripts (relative to this config file's location)
+scripts_directory = ".."
+# Main loop tick interval in milliseconds
+tick_interval_ms = 200
+# Paper trading mode (no real orders placed)
+paper_trading = true
+
+[kraken]
+# Your Kraken API key (leave empty for paper trading)
+api_key = ""
+# Your Kraken API secret (leave empty for paper trading)
+api_secret = ""
+# REST API endpoint
+rest_url = "https://api.kraken.com"
+# Public WebSocket endpoint
+ws_url = "wss://ws.kraken.com"
+# Authenticated WebSocket endpoint
+ws_auth_url = "wss://ws-auth.kraken.com"
+
+[risk]
+# Maximum position size per asset (in base currency units)
+max_position_size = 1.0
+# Maximum total loss across all scripts before emergency halt (USD)
+max_total_loss = 1000.0
+# Maximum loss per individual script before stopping it (USD)
+max_script_loss = 200.0
+# Maximum number of open orders across all scripts
+max_open_orders = 20
+# Emergency stop if equity drops below this value (0 = disabled)
+equity_floor = 0.0
+# Enable/disable position limit enforcement
+enforce_position_limits = true
+# Enable/disable loss limit enforcement
+enforce_loss_limits = true
+
+[rate_limit]
+# Maximum API calls per second (global) - relaxed for paper trading
+max_calls_per_second = 3
+# Maximum API calls per minute (global) - relaxed for paper trading
+max_calls_per_minute = 120
+# Cooldown period in seconds after hitting rate limit
+cooldown_seconds = 30
+# Per-script rate limit (calls per minute) - relaxed for paper trading
+per_script_calls_per_minute = 20
+
+[logging]
+# Log level: trace, debug, info, warn, error, critical
+level = "info"
+# Log file path
+log_file = "trader.log"
+# Output to console
+console_output = true
+# Output to file
+file_output = true
+# Maximum log file size in MB before rotation
+max_file_size_mb = 50
+# Maximum number of rotated log files to keep
+max_files = 5
+
+# Script definitions
+# Each [[scripts]] entry defines a trading script to load
+# 3 instances of top_crypto_trader for BTC, ETH, and SOL
+
+[[scripts]]
+name = "top_crypto_btc"
+path = "scripts/top_crypto_trader.lua"
+auto_start = true
+[scripts.parameters]
+pair = "XBT/USD"
+threshold = "0.3"
+quantity = "0.001"
+
+[[scripts]]
+name = "top_crypto_eth"
+path = "scripts/top_crypto_trader.lua"
+auto_start = true
+[scripts.parameters]
+pair = "ETH/USD"
+threshold = "0.3"
+quantity = "0.01"
+
+[[scripts]]
+name = "top_crypto_sol"
+path = "scripts/top_crypto_trader.lua"
+auto_start = true
+[scripts.parameters]
+pair = "SOL/USD"
+threshold = "0.3"
+quantity = "0.5"

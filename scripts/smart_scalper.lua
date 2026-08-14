@@ -17,7 +17,7 @@
 
 local state = {
     prices = {},
-    ma_length = 5,        -- 5-candle moving average (25 min on 5m chart)
+    ma_length = 10,       -- 10-candle moving average (50 min on 5m chart)
     position = "flat",
     entry_price = 0,
     tick_count = 0,
@@ -25,9 +25,9 @@ local state = {
     wins = 0,
     losses = 0,
     total_pnl = 0,
-    -- Risk management
-    take_profit_pct = 0.12,  -- Take profit at 0.12% gain
-    stop_loss_pct = 0.20,    -- Stop loss at 0.20% loss
+    -- Risk management - wider targets to overcome commission
+    take_profit_pct = 0.35,  -- Take profit at 0.35% gain
+    stop_loss_pct = 0.50,    -- Stop loss at 0.50% loss (1.4:1 risk ratio with commission)
 }
 
 local function get_ma()

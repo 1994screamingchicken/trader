@@ -38,8 +38,8 @@ bool BacktestEngine::run() {
     // Set up parameters that scripts typically expect
     std::vector<std::pair<std::string, std::string>> params = {
         {"pair", config_.pair},
-        {"threshold", "0.5"},
-        {"quantity", "0.01"}
+        {"threshold", "0.05"},
+        {"quantity", "0.1"}
     };
     engine->set_parameters(params);
 

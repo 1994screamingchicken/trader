@@ -1,7 +1,14 @@
 {
   "task_id": "task-backtest-engine",
   "task_description": "Add a backtesting engine to the Kraken Lua Trader that replays historical OHLC data through existing Lua trading scripts (unchanged), simulates order execution, and produces a performance report (P&L, trades, win rate, drawdown, Sharpe ratio). Invoked via --backtest CLI flag.",
-  "status": "in_progress",
+  "status": "completed",
   "feature_order": ["FEAT-001"],
-  "blocked_reason": null
+  "blocked_reason": null,
+  "verification": {
+    "build": "pass",
+    "tests": "pass",
+    "test_quality": "pass",
+    "docker_build": "skipped",
+    "summary": "Build compiles cleanly. Backtest runs end-to-end with both simple_momentum.lua and top_crypto_trader.lua. CLI error handling validated (--balance foo prints friendly error). All 5 v1 review issues fixed. V2 review APPROVED with 3 non-blocking suggestions for future improvement."
+  }
 }

@@ -15,7 +15,7 @@ local state = {
     last_price = nil,
     position = "flat",  -- "flat", "long", "short"
     tick_count = 0,
-    check_interval = 30,  -- Check price every 30 ticks (30 * 200ms = 6s)
+    check_interval = 1,  -- Check price every tick (for backtesting: 1 tick = 1 candle)
     total_trades = 0,
 }
 

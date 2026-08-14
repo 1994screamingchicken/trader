@@ -43,11 +43,11 @@ local config = {
     -- Price action lookback
     pa_lookback = 4,
 
-    -- Risk management - optimized for high win rate
-    take_profit_pct = 0.40,   -- small target = hit frequently
-    stop_loss_pct = 1.20,     -- very wide stop = rarely triggered
+    -- Risk management - optimized for profit + high win rate
+    take_profit_pct = 0.45,   -- slightly wider TP to capture more per win
+    stop_loss_pct = 0.60,     -- tighter stop - losses are smaller now
     trailing_stop_pct = 0.20, -- trailing stop locks in small gains early
-    max_hold_candles = 12,    -- exit after 12 candles if not profitable (time stop)
+    max_hold_candles = 8,     -- shorter time exit - kill bad trades faster
 }
 
 -- ============ STATE ============
@@ -298,7 +298,7 @@ function on_tick()
         end
 
         -- Time stop: exit if held too long without hitting TP
-        if state.candles_in_trade >= config.max_hold_candles and pnl_pct < config.take_profit_pct * 0.5 then
+        if state.candles_in_trade >= config.max_hold_candles and pnl_pct < config.take_profit_pct * 0.3 then
             local order = trader.market_order(params.pair, "sell", params.quantity)
             if order.success then
                 local pnl = (current_price - state.entry_price) * params.quantity

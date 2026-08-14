@@ -29,7 +29,57 @@ timestamp,open,high,low,close,volume
 
 ## Getting Historical Data from Kraken
 
-You can download OHLC data directly from the Kraken API:
+### Automated Download Tool
+
+The `tools/download_history.py` script downloads months of historical OHLC data from the Kraken public API. It handles pagination automatically (Kraken returns ~720 candles per request) by walking forward using the `since` parameter, deduplicates overlapping candles, and saves a sorted CSV ready for backtesting.
+
+```bash
+# Download 3 months of hourly BTC data
+python3 tools/download_history.py --pair XBTUSD --interval 60 --months 3
+
+# Download 6 months of 15-min ETH data
+python3 tools/download_history.py --pair ETHUSD --interval 15 --months 6
+
+# Download 1 month of daily SOL data
+python3 tools/download_history.py --pair SOLUSD --interval 1440 --months 1
+```
+
+#### Options
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--pair <pair>` | `XBTUSD` | Kraken trading pair |
+| `--interval <min>` | `60` | Candle interval in minutes (1, 5, 15, 30, 60, 240, 1440, 10080, 21600) |
+| `--months <n>` | `3` | Number of months of history to download |
+| `--output <path>` | `data/{pair}_{interval}m.csv` | Output CSV file path |
+
+The tool prints progress as it downloads:
+
+```
+Downloading XBTUSD OHLC data (interval=60m)
+Period: 3 months (2024-10-14 to now)
+Estimated candles: ~2160
+Output: data/XBTUSD_60m.csv
+
+Downloaded 720/2160 candles (33%)
+Downloaded 1440/2160 candles (66%)
+Downloaded 2160/2160 candles (100%)
+
+Total candles collected: 2160
+API requests made: 3
+Date range: 2024-10-14 00:00 to 2025-01-13 23:00 UTC
+Saved to: data/XBTUSD_60m.csv
+```
+
+After downloading, run a backtest:
+
+```bash
+./kraken_trader --backtest --data ../data/XBTUSD_60m.csv --script ../scripts/top_crypto_trader.lua --pair XBT/USD --balance 10000
+```
+
+### Manual Download (Single Request)
+
+For quick tests, you can download a single batch of ~720 candles directly:
 
 ```bash
 # Get hourly (interval=60) BTC/USD candles

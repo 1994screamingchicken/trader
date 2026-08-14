@@ -21,8 +21,8 @@
 
 -- ============ CONFIGURATION ============
 local config = {
-    -- How many strategies must agree to enter (4 out of 5 for higher win rate)
-    min_agreement = 4,
+    -- How many strategies must agree to enter (3 out of 5)
+    min_agreement = 3,
 
     -- EMA settings
     ema_fast = 8,
@@ -43,10 +43,11 @@ local config = {
     -- Price action lookback
     pa_lookback = 4,
 
-    -- Risk management
-    take_profit_pct = 0.60,   -- 0.60% take profit
-    stop_loss_pct = 0.80,     -- 0.80% stop loss (wider stop = fewer stop-outs)
-    trailing_stop_pct = 0.25, -- trailing stop activates after 0.25% profit
+    -- Risk management - optimized for high win rate
+    take_profit_pct = 0.40,   -- small target = hit frequently
+    stop_loss_pct = 1.20,     -- very wide stop = rarely triggered
+    trailing_stop_pct = 0.20, -- trailing stop locks in small gains early
+    max_hold_candles = 12,    -- exit after 12 candles if not profitable (time stop)
 }
 
 -- ============ STATE ============
@@ -61,6 +62,7 @@ local state = {
     highest_since_entry = 0,
     lowest_since_entry = 999999,
     trailing_active = false,
+    candles_in_trade = 0,
     total_trades = 0,
     wins = 0,
     losses = 0,
@@ -288,10 +290,28 @@ function on_tick()
     -- === POSITION MANAGEMENT ===
     if state.position == "long" then
         local pnl_pct = ((current_price - state.entry_price) / state.entry_price) * 100
+        state.candles_in_trade = state.candles_in_trade + 1
 
         -- Track highest price since entry for trailing stop
         if current_price > state.highest_since_entry then
             state.highest_since_entry = current_price
+        end
+
+        -- Time stop: exit if held too long without hitting TP
+        if state.candles_in_trade >= config.max_hold_candles and pnl_pct < config.take_profit_pct * 0.5 then
+            local order = trader.market_order(params.pair, "sell", params.quantity)
+            if order.success then
+                local pnl = (current_price - state.entry_price) * params.quantity
+                state.total_pnl = state.total_pnl + pnl
+                if pnl > 0 then state.wins = state.wins + 1 else state.losses = state.losses + 1 end
+                state.total_trades = state.total_trades + 1
+                state.position = "flat"
+                state.trailing_active = false
+                state.candles_in_trade = 0
+                log.info(string.format("[TIME] SELL %s @ %.2f (held %d candles, P&L: %+.3f%%  $%.4f)",
+                                       params.pair, current_price, config.max_hold_candles, pnl_pct, pnl))
+            end
+            return
         end
 
         -- Activate trailing stop once we're in profit
@@ -352,9 +372,27 @@ function on_tick()
 
     elseif state.position == "short" then
         local pnl_pct = ((state.entry_price - current_price) / state.entry_price) * 100
+        state.candles_in_trade = state.candles_in_trade + 1
 
         if current_price < state.lowest_since_entry then
             state.lowest_since_entry = current_price
+        end
+
+        -- Time stop for shorts
+        if state.candles_in_trade >= config.max_hold_candles and pnl_pct < config.take_profit_pct * 0.5 then
+            local order = trader.market_order(params.pair, "buy", params.quantity)
+            if order.success then
+                local pnl = (state.entry_price - current_price) * params.quantity
+                state.total_pnl = state.total_pnl + pnl
+                if pnl > 0 then state.wins = state.wins + 1 else state.losses = state.losses + 1 end
+                state.total_trades = state.total_trades + 1
+                state.position = "flat"
+                state.trailing_active = false
+                state.candles_in_trade = 0
+                log.info(string.format("[TIME] BUY %s @ %.2f (held %d candles, P&L: %+.3f%%  $%.4f)",
+                                       params.pair, current_price, config.max_hold_candles, pnl_pct, pnl))
+            end
+            return
         end
 
         if pnl_pct >= config.trailing_stop_pct then
@@ -444,6 +482,7 @@ function on_tick()
             state.position = "long"
             state.highest_since_entry = current_price
             state.trailing_active = false
+            state.candles_in_trade = 0
             log.info(string.format("[ENTRY] BUY %s @ %.2f (consensus: %d/5 bull | EMA:%d RSI:%d BB:%d VWAP:%d PA:%d)",
                                    params.pair, current_price, bull_votes, s1, s2, s3, s4, s5))
         end
@@ -456,6 +495,7 @@ function on_tick()
             state.position = "short"
             state.lowest_since_entry = current_price
             state.trailing_active = false
+            state.candles_in_trade = 0
             log.info(string.format("[ENTRY] SELL %s @ %.2f (consensus: %d/5 bear | EMA:%d RSI:%d BB:%d VWAP:%d PA:%d)",
                                    params.pair, current_price, bear_votes, s1, s2, s3, s4, s5))
         end

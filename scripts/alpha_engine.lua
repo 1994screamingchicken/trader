@@ -21,8 +21,8 @@
 
 -- ============ CONFIGURATION ============
 local config = {
-    -- How many strategies must agree to enter (3 out of 5)
-    min_agreement = 3,
+    -- How many strategies must agree to enter (4 out of 5 for higher win rate)
+    min_agreement = 4,
 
     -- EMA settings
     ema_fast = 8,
@@ -30,23 +30,23 @@ local config = {
 
     -- RSI settings
     rsi_period = 14,
-    rsi_oversold = 30,
-    rsi_overbought = 70,
+    rsi_oversold = 35,
+    rsi_overbought = 65,
 
     -- Bollinger Band settings
     bb_period = 20,
-    bb_std_mult = 2.0,
+    bb_std_mult = 1.5,
 
     -- VWAP deviation threshold
-    vwap_threshold = 0.3,  -- percent
+    vwap_threshold = 0.2,  -- percent
 
     -- Price action lookback
-    pa_lookback = 5,
+    pa_lookback = 4,
 
     -- Risk management
-    take_profit_pct = 0.80,   -- 0.80% take profit
-    stop_loss_pct = 0.40,     -- 0.40% stop loss (2:1 reward:risk)
-    trailing_stop_pct = 0.30, -- trailing stop activates after 0.3% profit
+    take_profit_pct = 0.60,   -- 0.60% take profit
+    stop_loss_pct = 0.80,     -- 0.80% stop loss (wider stop = fewer stop-outs)
+    trailing_stop_pct = 0.25, -- trailing stop activates after 0.25% profit
 }
 
 -- ============ STATE ============
